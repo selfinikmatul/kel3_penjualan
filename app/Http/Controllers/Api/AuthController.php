@@ -45,7 +45,20 @@ class AuthController extends Controller
         //membuat token auth untuk login
         $token = $user->createToken('auth_token')->plainTextToken; // men
         //menampilkan pesan sukses
-        return response()->json(['message' => 'Login sukses', 'access_token' => $token, 'token_type' => 'Bearer']);
+        return response()->json([
+    'message' => 'Login sukses',
+    'access_token' => $token,
+    'token_type' => 'Bearer',
+    'user' => [
+        'id' => $user->id,
+        'name' => $user->name,
+        'email' => $user->email,
+        // sementara berdasarkan email
+        'role' => $user->email == 'admin@gmail.com'
+            ? 'admin'
+            : 'user'
+    ]
+]);
     }
 
     public function logout(Request $request)
