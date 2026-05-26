@@ -39,8 +39,21 @@ class BarangController extends Controller
     public function update(Request $request, string $id)
     {
         $data = Barang::find($id);
-        $data->update($request->all());
-        return response()->json($data);
+
+    if (!$data) {
+        return response()->json([
+            'message' => 'Barang tidak ditemukan'
+        ], 404);
+    }
+
+    $data->update($request->all());
+
+    return response()->json([
+        'message' => 'Data berhasil diupdate',
+        'data' => $data
+    ]);
+
+
     }
 
     /**
