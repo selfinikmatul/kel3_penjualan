@@ -12,7 +12,7 @@ import Order from '../views/User/order.vue'
 const routes = [
   {
     path: '/',
-    component: Login
+    component: KelolaPesanan
   },
   {
     path: '/admin/dashboard',
