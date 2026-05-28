@@ -6,7 +6,11 @@
     <!-- PRODUK -->
     <div class="product-container">
 
-      <div class="card" v-for="item in products" :key="item.id">
+      <div
+        class="card"
+        v-for="item in products"
+        :key="item.id"
+      >
 
         <h2>{{ item.name }}</h2>
 
@@ -22,19 +26,19 @@
 
     </div>
 
-    <!-- NOTA -->
+    <!-- PESAN -->
     <div class="nota">
 
-      <h2>🧾 Nota Pembelian</h2>
+      <h2>📋 Pesanan</h2>
 
       <div v-if="cart.length === 0" class="empty">
-        Belum ada barang dibeli
+        Belum ada barang dipilih
       </div>
 
       <div
+        class="nota-item"
         v-for="(item, index) in cart"
         :key="index"
-        class="nota-item"
       >
         <span>{{ item.name }}</span>
         <span>Rp {{ item.price.toLocaleString() }}</span>
@@ -46,50 +50,37 @@
         Total : Rp {{ totalPrice.toLocaleString() }}
       </h3>
 
-      <!-- TOMBOL SELESAI -->
       <button
         class="finish-btn"
         v-if="cart.length > 0"
-        @click="finishOrder"
+        @click="buatPesanan"
       >
-        Selesai
+        Pesan
       </button>
 
     </div>
 
-    <!-- KELOLA PESANAN -->
-    <div class="orders">
+    <!-- NOTA QR -->
+    <div
+      class="qr-box"
+      v-if="showQR"
+    >
 
-      <h2>📦 Kelola Pesanan</h2>
+      <h2>✅ Pesanan Berhasil</h2>
 
-      <div v-if="orders.length === 0" class="empty">
-        Belum ada pesanan selesai
-      </div>
+      <p>
+        Tunjukkan QR ini saat mengambil barang
+      </p>
 
-      <div
-        class="order-card"
-        v-for="(order, index) in orders"
-        :key="index"
+      <!-- QR -->
+      <img
+        :src="qrCode"
+        alt="QR Code"
       >
 
-        <h3>Pesanan {{ index + 1 }}</h3>
+      <h3>Kode Pesanan</h3>
 
-        <div
-          v-for="(item, i) in order.items"
-          :key="i"
-          class="order-item"
-        >
-          <span>{{ item.name }}</span>
-          <span>Rp {{ item.price.toLocaleString() }}</span>
-        </div>
-
-        <hr>
-
-        <h4>
-          Total : Rp {{ order.total.toLocaleString() }}
-        </h4>
-
-      </div>
+      <h1>{{ orderCode }}</h1>
 
     </div>
 
@@ -113,7 +104,11 @@ const products = ref([
 
 const cart = ref([])
 
-const orders = ref([])
+const showQR = ref(false)
+
+const orderCode = ref('')
+
+const qrCode = ref('')
 
 const buyItem = (item) => {
   cart.value.push(item)
@@ -125,14 +120,23 @@ const totalPrice = computed(() => {
   }, 0)
 })
 
-const finishOrder = () => {
+const buatPesanan = () => {
 
-  orders.value.push({
-    items: [...cart.value],
-    total: totalPrice.value
-  })
+  // RANDOM CODE
+  const randomCode =
+    'ORD-' +
+    Math.floor(Math.random() * 999999)
+
+  orderCode.value = randomCode
+
+  // QR GENERATOR
+  qrCode.value =
+    `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${randomCode}`
+
+  showQR.value = true
 
   cart.value = []
+
 }
 
 </script>
@@ -151,8 +155,6 @@ const finishOrder = () => {
   background: #f5f7fb;
   font-family: Arial, Helvetica, sans-serif;
 }
-
-/* JUDUL */
 
 .title{
   text-align: center;
@@ -183,33 +185,30 @@ const finishOrder = () => {
 }
 
 .card h2{
-  color: #333;
   margin-bottom: 15px;
 }
 
 .price{
-  color: #4f46e5;
+  color: #4338ca;
   font-size: 20px;
   font-weight: bold;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 button{
-  background: #4f46e5;
+  background: #4338ca;
   color: white;
   border: none;
   padding: 10px 18px;
   border-radius: 10px;
   cursor: pointer;
-  transition: 0.3s;
-  font-size: 15px;
 }
 
 button:hover{
-  background: #372fcf;
+  background: #312e81;
 }
 
-/* NOTA */
+/* PESAN */
 
 .nota{
   margin-top: 45px;
@@ -221,7 +220,6 @@ button:hover{
 
 .nota h2{
   margin-bottom: 20px;
-  color: #333;
 }
 
 .empty{
@@ -232,7 +230,6 @@ button:hover{
   display: flex;
   justify-content: space-between;
   margin: 12px 0;
-  font-size: 17px;
 }
 
 hr{
@@ -241,7 +238,7 @@ hr{
 
 .total{
   text-align: right;
-  color: #4f46e5;
+  color: #4338ca;
   margin-bottom: 20px;
 }
 
@@ -254,41 +251,35 @@ hr{
   background: #15803d;
 }
 
-/* KELOLA PESANAN */
+/* QR */
 
-.orders{
+.qr-box{
   margin-top: 40px;
   background: white;
-  padding: 25px;
+  padding: 30px;
   border-radius: 20px;
+  text-align: center;
   box-shadow: 0 6px 15px rgba(0,0,0,0.1);
 }
 
-.orders h2{
-  margin-bottom: 20px;
-}
-
-.order-card{
-  margin-top: 20px;
-  padding: 20px;
-  border: 1px solid #ddd;
-  border-radius: 15px;
-}
-
-.order-card h3{
-  margin-bottom: 15px;
-  color: #4338ca;
-}
-
-.order-item{
-  display: flex;
-  justify-content: space-between;
-  margin: 10px 0;
-}
-
-.order-card h4{
-  text-align: right;
+.qr-box h2{
   color: #16a34a;
+  margin-bottom: 10px;
+}
+
+.qr-box p{
+  margin-bottom: 20px;
+  color: #555;
+}
+
+.qr-box img{
+  width: 220px;
+  margin: 20px 0;
+}
+
+.qr-box h1{
+  color: #4338ca;
+  margin-top: 10px;
 }
 
 </style>
