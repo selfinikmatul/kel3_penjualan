@@ -10,22 +10,36 @@ import DashboardUser from '../views/User/dashboard.vue'
 import Order from '../views/User/order.vue'
 
 const routes = [
+  // buka awal -> login
   {
     path: '/',
-    component: KelolaPesanan
+    redirect: '/login'
   },
+
+  // LOGIN
+  {
+    path: '/login',
+    component: Login
+  },
+
+  // ADMIN (harus login)
   {
     path: '/admin/dashboard',
-    component: DashboardAdmin
+    component: DashboardAdmin,
+    meta: { requiresAuth: true }
   },
   {
     path: '/admin/produk',
-    component: KelolaProduk
+    component: KelolaProduk,
+    meta: { requiresAuth: true }
   },
   {
     path: '/admin/pesanan',
-    component: KelolaPesanan
+    component: KelolaPesanan,
+    meta: { requiresAuth: true }
   },
+
+  // USER
   {
     path: '/user/dashboard',
     component: DashboardUser
@@ -39,6 +53,19 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+// CEK LOGIN
+router.beforeEach((to, from, next) => {
+
+  const token = localStorage.getItem('token')
+
+  if (to.meta.requiresAuth && !token) {
+    next('/login')
+  } else {
+    next()
+  }
+
 })
 
 export default router

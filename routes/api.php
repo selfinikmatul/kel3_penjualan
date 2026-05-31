@@ -19,6 +19,26 @@ Route::post('/login', [AuthController::class, 'login']);
     Route::apiResource('pelanggan', PelangganController::class);
     Route::apiResource('barang', BarangController::class);
     Route::apiResource('transaksi', TransaksiController::class);
+
+    Route::get('/scan/{kode}', function ($kode) {
+
+    $transaksi = \App\Models\Transaksi::with([
+        'pelanggan',
+        'barang'
+    ])
+    ->where('kode_pesanan', $kode)
+    ->get();
+
+    if ($transaksi->isEmpty()) {
+
+        return response()->json([
+            'message' => 'Pesanan tidak ditemukan'
+        ], 404);
+
+    }
+
+    return response()->json($transaksi);
+});
 // Protected routes (harus login)
 // Route::middleware('auth:sanctum')->group(function () {
 //     Route::post('/logout', [AuthController::class, 'logout']);

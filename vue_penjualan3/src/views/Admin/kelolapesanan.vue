@@ -1,191 +1,376 @@
 <template>
-  <div class="container">
+  <div class="page">
 
-    <div class="header">
-      <h1>Kelola Pesanan</h1>
+    <!-- HEADER -->
+    <div class="header-card">
+      <div>
+        <h2>📋 Kelola Pesanan</h2>
+        <p>Data pesanan pelanggan MINI SPW</p>
+      </div>
 
+      <button
+        class="scan-btn"
+        @click="toggleScanner"
+      >
+        {{ showScanner ? '❌ Tutup Scan' : '📷 Scan QR' }}
+      </button>
     </div>
 
-    <div class="card">
+    <!-- SCANNER -->
+    <div
+      v-if="showScanner"
+      class="scanner-card"
+    >
+      <div id="reader"></div>
+    </div>
+
+    <!-- TABEL PESANAN -->
+    <div class="table-card">
+
       <table>
         <thead>
           <tr>
-            <th>No</th>
-            <th>Customer</th>
-            <th>Produk</th>
-            <th>Status</th>
+            <th>Kode</th>
+            <th>Barang</th>
             <th>Total</th>
-            <th>Aksi</th>
+            <th>Status</th>
           </tr>
         </thead>
 
         <tbody>
-          <tr v-for="(item, index) in pesananList" :key="index">
-            <td>{{ index + 1 }}</td>
-            <td>{{ item.nama }}</td>
-            <td>{{ item.produk }}</td>
+
+          <tr
+            v-for="item in daftarPesanan"
+            :key="item.id"
+          >
+            <td>{{ item.kode_pesanan }}</td>
 
             <td>
+              {{ item.barang?.nama_barang }}
+            </td>
+
+            <td>
+              Rp
+              {{ Number(item.total_harga).toLocaleString() }}
+            </td>
+
+            <td>
+
               <span
-                :class="
-                  item.status == 'Diproses'
-                    ? 'status proses'
-                    : 'status selesai'
-                "
+                v-if="item.status==='Menunggu Scan'"
+                class="badge waiting"
               >
-                {{ item.status }}
+                Menunggu Scan
               </span>
+
+              <span
+                v-else
+                class="badge success"
+              >
+                Sudah Diambil
+              </span>
+
             </td>
 
-            <td>Rp {{ item.total }}</td>
-
-            <td>
-              <button class="btn selesai" @click="ubahStatus(index)">
-                Selesai
-              </button>
-
-              <button class="btn hapus" @click="hapus(index)">
-                Hapus
-              </button>
-            </td>
           </tr>
+
         </tbody>
       </table>
+
+    </div>
+
+    <!-- DETAIL HASIL SCAN -->
+    <div
+      v-if="pesanan.length"
+      class="detail-card"
+    >
+
+      <h3>✅ Pesanan Ditemukan</h3>
+
+      <div
+        v-for="item in pesanan"
+        :key="item.id"
+        class="scan-item"
+      >
+
+        <p>
+          <b>Barang :</b>
+          {{ item.barang?.nama_barang }}
+        </p>
+
+        <p>
+          <b>Harga :</b>
+          Rp
+          {{ Number(item.total_harga).toLocaleString() }}
+        </p>
+
+        <hr>
+
+      </div>
+
+      <h4>
+        Kode:
+        {{ pesanan[0].kode_pesanan }}
+      </h4>
+
+      <h4>
+        Status:
+        {{ pesanan[0].status }}
+      </h4>
+
+      <button
+        v-if="pesanan[0].status !== 'Sudah Diambil'"
+        class="verify-btn"
+        @click="verifikasi"
+      >
+        ✔ Verifikasi Semua Pesanan
+      </button>
+
     </div>
 
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import {
+  ref,
+  onMounted
+} from 'vue'
 
-const pesananList = ref([
-  {
-    nama: 'Slamikk',
-    produk: 'Sempik',
-    status: 'Diproses',
-    total: '12.000'
+import axios from 'axios'
+import { Html5QrcodeScanner }
+from 'html5-qrcode'
+
+const daftarPesanan = ref([])
+const pesanan = ref([])
+const showScanner = ref(false)
+const scanner = ref(null)
+
+/* AMBIL PESANAN */
+
+const getPesanan = async () => {
+
+  try {
+
+    const res = await axios.get(
+      'http://127.0.0.1:8000/api/transaksi'
+    )
+
+    daftarPesanan.value = res.data
+
+  } catch(err){
+
+    console.log(err)
+
   }
-])
-
-const ubahStatus = (index) => {
-  pesananList.value[index].status = 'Selesai'
 }
 
-const hapus = (index) => {
-  pesananList.value.splice(index, 1)
+onMounted(()=>{
+  getPesanan()
+})
+
+/* SCAN */
+
+const toggleScanner = () => {
+
+  if(!showScanner.value){
+
+    showScanner.value = true
+
+    setTimeout(()=>{
+
+      scanner.value =
+        new Html5QrcodeScanner(
+          "reader",
+          {
+            fps:10,
+            qrbox:250
+          },
+          false
+        )
+
+      scanner.value.render(
+
+        async(decodedText)=>{
+
+          try{
+
+            const res =
+              await axios.get(
+                `http://127.0.0.1:8000/api/scan/${decodedText}`
+              )
+
+            console.log(res.data)
+
+            if(res.data.length){
+
+              pesanan.value =
+                res.data
+
+              scanner.value.clear()
+              showScanner.value = false
+
+            }else{
+
+              alert('Pesanan tidak ditemukan')
+
+            }
+
+          }catch(err){
+
+            console.log(err)
+            alert('Scan gagal')
+
+          }
+
+        },
+        ()=>{}
+      )
+
+    },300)
+
+  }else{
+
+    showScanner.value = false
+
+    if(scanner.value){
+      scanner.value.clear()
+    }
+  }
 }
 
-const tambahPesanan = () => {
-  pesananList.value.push({
-    nama: 'Customer Baru',
-    produk: 'Produk Baru',
-    status: 'Diproses',
-    total: '100.000'
-  })
+/* VERIFIKASI */
+
+const verifikasi = async () => {
+
+  try{
+
+    for(const item of pesanan.value){
+
+      await axios.put(
+        `http://127.0.0.1:8000/api/transaksi/${item.id}`,
+        {
+          status:'Sudah Diambil'
+        }
+      )
+    }
+
+    alert('Semua pesanan diverifikasi')
+
+    pesanan.value = []
+
+    getPesanan()
+
+  }catch(err){
+
+    console.log(err)
+
+  }
 }
 </script>
 
 <style scoped>
 
-*{
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+.page{
+  min-height:100vh;
+  background:#f5f7fb;
+  padding:30px;
+  font-family:Arial;
 }
 
-.container{
-  min-height: 100vh;
-  padding: 40px;
-  background: #f4f7fb;
-  font-family: Arial, Helvetica, sans-serif;
+.header-card{
+  background:white;
+  border-radius:20px;
+  padding:25px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:25px;
+  box-shadow:0 6px 15px rgba(0,0,0,.08);
 }
 
-.header{
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
+.header-card h2{
+  color:#4338ca;
 }
 
-.header h1{
-  font-size: 35px;
-  color: #333;
+.scan-btn{
+  background:#4338ca;
+  color:white;
+  border:none;
+  padding:12px 18px;
+  border-radius:12px;
+  cursor:pointer;
 }
 
-.btn-tambah{
-  background: #4f46e5;
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 15px;
-  transition: 0.3s;
+.scanner-card{
+  background:white;
+  padding:20px;
+  border-radius:20px;
+  margin-bottom:25px;
+  box-shadow:0 6px 15px rgba(0,0,0,.08);
 }
 
-.btn-tambah:hover{
-  background: #4338ca;
-}
-
-.card{
-  background: white;
-  padding: 25px;
-  border-radius: 20px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+.table-card{
+  background:white;
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 6px 15px rgba(0,0,0,.08);
 }
 
 table{
-  width: 100%;
-  border-collapse: collapse;
+  width:100%;
+  border-collapse:collapse;
 }
 
-th{
-  background: #4f46e5;
-  color: white;
-  padding: 15px;
-  text-align: left;
+thead{
+  background:#4338ca;
+  color:white;
 }
 
-td{
-  padding: 15px;
-  border-bottom: 1px solid #eee;
+th,td{
+  padding:16px;
+  text-align:center;
 }
 
-tr:hover{
-  background: #f9fafb;
+tbody tr{
+  border-bottom:1px solid #eee;
 }
 
-.status{
-  padding: 8px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  color: white;
+.badge{
+  padding:8px 12px;
+  border-radius:999px;
+  color:white;
 }
 
-.proses{
-  background: orange;
+.waiting{
+  background:#f59e0b;
 }
 
-.selesai{
-  background: #22c55e;
+.success{
+  background:#10b981;
 }
 
-.btn{
-  border: none;
-  padding: 8px 12px;
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
-  margin-right: 5px;
+.detail-card{
+  margin-top:25px;
+  background:white;
+  border-radius:20px;
+  padding:25px;
+  box-shadow:0 6px 15px rgba(0,0,0,.08);
 }
 
-.hapus{
-  background: #ef4444;
+.scan-item{
+  margin:15px 0;
 }
 
-.hapus:hover{
-  background: #dc2626;
+.verify-btn{
+  width:100%;
+  background:#10b981;
+  color:white;
+  border:none;
+  padding:14px;
+  border-radius:12px;
+  cursor:pointer;
+  margin-top:15px;
 }
 
 </style>

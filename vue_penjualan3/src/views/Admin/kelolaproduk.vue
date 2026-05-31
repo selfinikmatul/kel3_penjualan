@@ -1,62 +1,109 @@
 <template>
-  <div class="container">
+  <div class="page">
 
-    <h1 class="title">📦 Kelola Produk</h1>
+    <!-- HEADER -->
+    <div class="header-card">
+
+      <div>
+        <h2>📦 Kelola Produk</h2>
+        <p>Tambah, edit, dan hapus produk MINI SPW</p>
+      </div>
+
+    </div>
 
     <!-- FORM -->
-    <div class="form-box">
+    <div class="form-card">
+
+      <h4 class="mb-3">
+        {{ editMode ? '✏️ Edit Produk' : '➕ Tambah Produk' }}
+      </h4>
 
       <input
-        type="text"
-        v-model="nama_barang"
+        v-model="form.nama_barang"
+        class="input"
         placeholder="Nama Barang"
-      >
+      />
 
       <input
-        type="number"
-        v-model="harga_barang"
-        placeholder="Harga Barang"
-      >
+        v-model="form.kategori"
+        class="input"
+        placeholder="Kategori"
+      />
 
       <input
+        v-model="form.harga"
         type="number"
-        v-model="stok_barang"
-        placeholder="Stok Barang"
-      >
+        class="input"
+        placeholder="Harga"
+      />
 
-      <button @click="tambahBarang">
-        Tambah Produk
+      <input
+        v-model="form.stok"
+        type="number"
+        class="input"
+        placeholder="Stok"
+      />
+
+      <button
+        class="save-btn"
+        @click="saveProduk"
+      >
+        {{ editMode ? 'Update Produk' : 'Simpan Produk' }}
       </button>
 
     </div>
 
-    <!-- PRODUK -->
-    <div class="product-container">
+    <!-- TABLE -->
+    <div class="table-card">
 
-      <div
-        class="card"
-        v-for="item in barang"
-        :key="item.id"
-      >
+      <table>
 
-        <h2>{{ item.nama_barang }}</h2>
+        <thead>
+          <tr>
+            <th>Nama</th>
+            <th>Kategori</th>
+            <th>Harga</th>
+            <th>Stok</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
 
-        <p class="harga">
-          Rp {{ item.harga_barang }}
-        </p>
+        <tbody>
 
-        <p class="stok">
-          Stok : {{ item.stok_barang }}
-        </p>
+          <tr
+            v-for="item in produk"
+            :key="item.id"
+          >
+            <td>{{ item.nama_barang }}</td>
+            <td>{{ item.kategori }}</td>
+            <td>
+              Rp {{ Number(item.harga).toLocaleString() }}
+            </td>
+            <td>{{ item.stok }}</td>
 
-        <button
-          class="hapus"
-          @click="hapusBarang(item.id)"
-        >
-          Hapus
-        </button>
+            <td>
 
-      </div>
+              <button
+                class="edit-btn"
+                @click="editProduk(item)"
+              >
+                Edit
+              </button>
+
+              <button
+                class="delete-btn"
+                @click="hapusProduk(item.id)"
+              >
+                Hapus
+              </button>
+
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
 
     </div>
 
@@ -64,165 +111,204 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
 
-import { ref } from 'vue'
+const produk = ref([])
 
-const nama_barang = ref('')
-const harga_barang = ref('')
-const stok_barang = ref('')
+const editMode = ref(false)
+const editId = ref(null)
 
-const barang = ref([
-  {
-    id: 1,
-    nama_barang: 'Spidol',
-    harga_barang: 5000,
-    stok_barang: 10
-  },
-  {
-    id: 2,
-    nama_barang: 'Bolpoin',
-    harga_barang: 3000,
-    stok_barang: 20
-  },
-  {
-    id: 3,
-    nama_barang: 'Pensil',
-    harga_barang: 2000,
-    stok_barang: 15
-  }
-])
+const form = ref({
+  nama_barang:'',
+  kategori:'',
+  harga:'',
+  stok:''
+})
 
-const tambahBarang = () => {
-
-  if(
-    nama_barang.value === '' ||
-    harga_barang.value === '' ||
-    stok_barang.value === ''
-  ){
-    alert('Isi semua data!')
-    return
-  }
-
-  barang.value.push({
-    id: Date.now(),
-    nama_barang: nama_barang.value,
-    harga_barang: harga_barang.value,
-    stok_barang: stok_barang.value
-  })
-
-  nama_barang.value = ''
-  harga_barang.value = ''
-  stok_barang.value = ''
-
-}
-
-const hapusBarang = (id) => {
-  barang.value = barang.value.filter(
-    item => item.id !== id
+const getProduk = async () => {
+  const res = await axios.get(
+    'http://127.0.0.1:8000/api/barang'
   )
+  produk.value = res.data
 }
 
+onMounted(() => {
+  getProduk()
+})
+
+const saveProduk = async () => {
+
+  if(editMode.value){
+
+    await axios.put(
+      `http://127.0.0.1:8000/api/barang/${editId.value}`,
+      form.value
+    )
+
+  }else{
+
+    await axios.post(
+      'http://127.0.0.1:8000/api/barang',
+      form.value
+    )
+  }
+
+  form.value = {
+    nama_barang:'',
+    kategori:'',
+    harga:'',
+    stok:''
+  }
+
+  editMode.value = false
+  editId.value = null
+
+  getProduk()
+}
+
+const editProduk = (item) => {
+
+  editMode.value = true
+  editId.value = item.id
+
+  form.value = {
+    nama_barang:item.nama_barang,
+    kategori:item.kategori,
+    harga:item.harga,
+    stok:item.stok
+  }
+}
+
+const hapusProduk = async(id)=>{
+
+  if(confirm('Hapus produk?')){
+
+    await axios.delete(
+      `http://127.0.0.1:8000/api/barang/${id}`
+    )
+
+    getProduk()
+  }
+}
 </script>
 
 <style scoped>
 
-*{
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+.page{
+  min-height:100vh;
+  background:#f5f7fb;
+  padding:30px;
+  font-family:Arial;
 }
 
-.container{
-  min-height: 100vh;
-  background: #f5f7fb;
-  padding: 30px;
-  font-family: Arial, Helvetica, sans-serif;
+/* HEADER */
+
+.header-card{
+  background:white;
+  border-radius:20px;
+  padding:25px;
+  box-shadow:0 6px 15px rgba(0,0,0,.08);
+  margin-bottom:25px;
 }
 
-.title{
-  text-align: center;
-  margin-bottom: 35px;
-  color: #4338ca;
+.header-card h2{
+  color:#4338ca;
+  margin-bottom:5px;
+}
+
+.header-card p{
+  color:#777;
 }
 
 /* FORM */
 
-.form-box{
-  background: white;
-  padding: 25px;
-  border-radius: 20px;
-  margin-bottom: 35px;
-  display: flex;
-  gap: 15px;
-  flex-wrap: wrap;
-  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+.form-card{
+  background:white;
+  padding:25px;
+  border-radius:20px;
+  box-shadow:0 6px 15px rgba(0,0,0,.08);
+  margin-bottom:25px;
 }
 
-.form-box input{
-  flex: 1;
-  min-width: 200px;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  font-size: 15px;
+.input{
+  width:100%;
+  padding:14px;
+  border:1px solid #ddd;
+  border-radius:12px;
+  margin-bottom:15px;
+  outline:none;
 }
 
-.form-box button{
-  background: #4338ca;
-  color: white;
-  border: none;
-  padding: 12px 18px;
-  border-radius: 10px;
-  cursor: pointer;
+.input:focus{
+  border-color:#4338ca;
 }
 
-.form-box button:hover{
-  background: #312e81;
+.save-btn{
+  background:#4338ca;
+  color:white;
+  border:none;
+  padding:12px 18px;
+  border-radius:12px;
+  cursor:pointer;
+  width:100%;
 }
 
-/* CARD */
-
-.product-container{
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
-  gap: 25px;
+.save-btn:hover{
+  background:#312e81;
 }
 
-.card{
-  background: white;
-  padding: 25px;
-  border-radius: 20px;
-  text-align: center;
-  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+/* TABLE */
+
+.table-card{
+  background:white;
+  border-radius:20px;
+  box-shadow:0 6px 15px rgba(0,0,0,.08);
+  overflow:hidden;
 }
 
-.card h2{
-  margin-bottom: 15px;
-  color: #333;
+table{
+  width:100%;
+  border-collapse:collapse;
 }
 
-.harga{
-  color: #4338ca;
-  font-weight: bold;
-  margin-bottom: 10px;
+thead{
+  background:#4338ca;
+  color:white;
 }
 
-.stok{
-  color: #16a34a;
-  margin-bottom: 20px;
+th,td{
+  padding:16px;
+  text-align:center;
 }
 
-.hapus{
-  background: crimson;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 10px;
-  cursor: pointer;
+tbody tr{
+  border-bottom:1px solid #eee;
 }
 
-.hapus:hover{
-  background: darkred;
+tbody tr:hover{
+  background:#f8f9ff;
+}
+
+.edit-btn{
+  background:#f59e0b;
+  color:white;
+  border:none;
+  padding:8px 14px;
+  border-radius:10px;
+  margin-right:8px;
+}
+
+.delete-btn{
+  background:#ef4444;
+  color:white;
+  border:none;
+  padding:8px 14px;
+  border-radius:10px;
+}
+
+button{
+  cursor:pointer;
 }
 
 </style>
